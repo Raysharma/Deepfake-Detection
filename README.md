@@ -44,8 +44,8 @@ DeepFake Detection System/
 
 ### 1. Clone the repository
 ```bash
-git clone <YOUR_REPO_URL>
-cd "DeepFake Detection System"
+git clone https://github.com/Raysharma/Deepfake-Detection.git
+cd Deepfake-Detection
 ```
 
 ### 2. Create and activate virtual environment
