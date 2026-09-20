@@ -4,7 +4,7 @@ venv/
 env/
 ENV/
 
-# Python cache & build
+# Python Cache & Bytecode
 __pycache__/
 *.py[cod]
 *$py.class
@@ -26,21 +26,35 @@ wheels/
 .installed.cfg
 *.egg
 
-# Database & SQLite files
-data/*.db
-data/*.sqlite
-data/*.sqlite3
+# Heavy Model Weights & Checkpoints (Store on Drive / Cloud instead of Git!)
+*.pt
+*.pth
+*.h5
+*.bin
+*.onnx
+models_checkpoints/
+weights/
+
+# Video Datasets & Temporary Uploads
+temp_uploads/
+datasets/
+data/raw/
+data/processed/
+*.mp4
+*.avi
+*.mov
+*.wav
+*.mp3
+!sample_data/demo_mouth.mp4
+
+# SQLite / Local DB files
 *.db
 *.sqlite
 *.sqlite3
 
-# IDE & OS files
+# IDE & OS Cache
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
 *.log
-
-# Large media / uploads cache
-uploads/
-temp/

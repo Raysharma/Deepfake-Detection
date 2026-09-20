@@ -1,79 +1,74 @@
-# 🛡️ AI-Powered Multi-Modal Deepfake Detection System
+# 🛡️ Multimodal Explainable Deepfake Detection System
 
-An enterprise-grade multi-modal deepfake detection and explainability system supporting **Image**, **Video**, and **Audio/Voice** inputs with forensic artifact analysis, Grad-CAM visual heatmaps, audio-lip sync analysis, and an active learning feedback loop.
-
----
-
-## 🌟 Key Features
-
-- **Multi-Modal Detection Pipeline**:
-  - 🖼️ **Image Forensics**: Error Level Analysis (ELA), 2D Fourier (FFT) Frequency Analysis, and Grad-CAM visual heatmap generator.
-  - 🎬 **Video Forensics**: Frame sampling, inter-frame optical jitter variance, temporal flicker detection, and audio-to-lip synchronization scoring.
-  - 🎙️ **Audio / Voice Forensics**: Zero-Crossing Rate (ZCR), Spectral Flux, and MFCC anomaly inspection for cloned speech detection.
-- **Explainability Layer**: Visual Grad-CAM heatmaps highlighting suspicious facial/boundary regions.
-- **Relational Audit Logging & Feedback**: SQLite database storing full scan metrics, inference latencies, and human reviewer feedback for model retraining.
-- **RESTful API**: Fast, asynchronous endpoints built with FastAPI and strictly validated with Pydantic v2.
-- **Interactive Dashboard**: Modern glassmorphic dark-mode web UI with real-time confidence metrics and preset demo modes.
+A multimodal deepfake detection system evaluating media across three complementary dimensions:
+1. **Image (Spatial Artifacts)**: Face boundary warping & blending artifacts via Vision CNN (EfficientNet/XceptionNet) + Grad-CAM heatmaps.
+2. **Audio (Acoustic Anomalies)**: Cloned speech & synthetic frequency anomalies via Mel-Spectrogram CNN + Grad-CAM.
+3. **Video (Audio-Visual Lip-Sync Mismatch)**: Cross-modal synchronization distance & phoneme-lip alignment via **SyncNet**.
 
 ---
 
-## 🏗️ Architecture & Modules
+## 🏛️ Project Directory Structure
 
 ```
-DeepFake Detection System/
-├── backend/
-│   ├── app.py                     # FastAPI application & endpoint routing
-│   ├── database.py                # SQLite database and audit feedback layer
-│   ├── schemas.py                 # Pydantic data contracts for all 3 modalities
-│   └── pipeline/
-│       ├── image_pipeline.py      # ELA, 2D FFT, and Grad-CAM generator
-│       ├── video_pipeline.py      # Temporal flicker & optical jitter analyzer
-│       └── audio_pipeline.py      # Spectral flux & voice clone detector
-├── static/
-│   ├── index.html                 # Modern forensic dashboard
-│   ├── css/styles.css             # Glassmorphic dark-mode styling
-│   └── js/app.js                  # Async client-side application logic
-├── requirements.txt               # Dependencies list
-├── run_server.py                  # Entrypoint launcher script
-└── README.md                      # Project documentation
+Deepfake-Detection/
+├── docs/                                # Project architecture & integration contract
+│   ├── ARCHITECTURE.md                  # Detailed dataflow diagrams
+│   └── INTEGRATION_CONTRACT.md          # Input/output contracts for Persons 1, 2, 3, 4
+│
+├── common/                              # Shared schemas and dataclasses
+│   ├── __init__.py
+│   └── contracts.py                     # Standardized Python dictionary contracts
+│
+├── modules/
+│   ├── image_modality/                  # Person 1 (Spatial AI - EfficientNet + Grad-CAM)
+│   │   ├── README.md                    # Instructions & deliverables
+│   │   └── predict.py                   # Standard entrypoint: predict(video_path) -> dict
+│   │
+│   ├── audio_modality/                  # Person 2 (Acoustic AI - Librosa + ResNet + Grad-CAM)
+│   │   ├── README.md                    # Instructions & deliverables
+│   │   └── predict.py                   # Standard entrypoint: predict(video_path) -> dict
+│   │
+│   ├── video_sync_modality/             # Person 3 (Multimodal Lip-Sync / SyncNet - YOUR WORK)
+│   │   ├── README.md                    # SyncNet technical design & math
+│   │   ├── predict.py                   # Standard entrypoint: predict(video_path) -> dict
+│   │   ├── inference.py                 # Core alignment & offset scanner
+│   │   ├── run_test.py                  # Standalone local test runner
+│   │   ├── data_preprocessing/          # MediaPipe lip landmark isolation & audio extraction
+│   │   └── models/                      # Dual-stream PyTorch SyncNet definition
+│   │
+│   └── backend_service/                 # Person 4 (FastAPI + Celery + Redis + MongoDB)
+│       ├── README.md                    # Backend architecture instructions
+│       └── orchestrator_example.py      # Pipeline coordinator importing the 3 ML modules
+│
+├── sample_data/                         # Local test media (e.g. demo_mouth.mp4)
+├── requirements.txt                     # Unified project dependencies
+├── .gitignore                           # Excludes heavy weights, datasets, temp caches
+└── README.md                            # Project overview
 ```
 
 ---
 
-## 🚀 Getting Started
+## 👥 Division of Work (4-Member Team)
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/Raysharma/Deepfake-Detection.git
-cd Deepfake-Detection
-```
+| Role | Domain | Tech Stack | Deliverable |
+| :--- | :--- | :--- | :--- |
+| **Person 1** | Image & Spatial AI | PyTorch, OpenCV, MediaPipe, EfficientNet, Grad-CAM | Face crops, spatial fake score, face heatmap |
+| **Person 2** | Audio & Acoustic AI | PyTorch, Librosa, ResNet50, Grad-CAM | Mel-spectrograms, synthetic voice score, audio heatmap |
+| **Person 3** | Multimodal & Lip-Sync AI | PyTorch, MediaPipe, OpenCV, SyncNet | 5-frame mouth sequences, temporal offset, sync score |
+| **Person 4** | Backend & Infrastructure | FastAPI, Celery, Redis, MongoDB | Asynchronous API, DB schemas, pipeline orchestrator |
 
-### 2. Create and activate virtual environment
+---
+
+## 🚀 Independent Testing (Zero Merge Conflicts)
+
+Each engineer works strictly in their own subfolder under `modules/` and tests locally:
+
+### To test the Lip-Sync module (Person 3):
 ```powershell
-# Windows PowerShell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+python modules/video_sync_modality/run_test.py
 ```
 
-### 3. Install dependencies
-```bash
-pip install -r requirements.txt
+### To test the Backend Orchestrator (Person 4):
+```powershell
+python modules/backend_service/orchestrator_example.py
 ```
-
-### 4. Run the server
-```bash
-python run_server.py
-```
-
-### 5. Access the application
-- 🌐 **Web Dashboard**: [http://127.0.0.1:8000](http://127.0.0.1:8000)
-- 📖 **Interactive Swagger API Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-
----
-
-## 👥 Team Responsibilities
-
-- **Module 1**: Core Pipeline, Database & API Architecture (FastAPI + SQLite)
-- **Module 2**: Image Detection & Grad-CAM Explainability (OpenCV, ELA, 2D FFT)
-- **Module 3**: Video Temporal & Audio-Lip Sync Analysis
-- **Module 4**: Audio Spectral Forensics & Voice Cloned Speech Detection
