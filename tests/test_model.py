@@ -1,8 +1,8 @@
-﻿import pytest
+import pytest
 import numpy as np
 from PIL import Image
 
-from backend.forensics.services.model_service import (
+from backend.pipeline.forensics.services.model_service import (
     predict_deepfake,
     get_or_load_model,
     get_target_convolutional_layer,

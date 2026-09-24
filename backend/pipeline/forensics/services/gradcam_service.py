@@ -1,4 +1,4 @@
-﻿import cv2
+import cv2
 import numpy as np
 from PIL import Image
 from typing import Dict, Any, Optional, Tuple
@@ -10,13 +10,13 @@ try:
 except ImportError:
     HAS_TORCH = False
 
-from backend.forensics.utils.file_utils import get_artifact_paths
-from backend.forensics.utils.image_utils import (
+from backend.pipeline.forensics.utils.file_utils import get_artifact_paths
+from backend.pipeline.forensics.utils.image_utils import (
     prepare_model_tensor,
     pil_to_cv2,
     save_image_safely
 )
-from backend.forensics.services.model_service import (
+from backend.pipeline.forensics.services.model_service import (
     get_or_load_model,
     get_target_convolutional_layer,
     CLASSES

@@ -4,20 +4,20 @@ from datetime import datetime, timezone
 from typing import Dict, Any, List
 from PIL import Image
 
-from backend.forensics.utils.file_utils import (
+from backend.pipeline.forensics.utils.file_utils import (
     validate_image_bytes,
     generate_unique_prefix,
     get_artifact_paths,
     ensure_output_directories
 )
-from backend.forensics.utils.image_utils import (
+from backend.pipeline.forensics.utils.image_utils import (
     load_image_from_bytes,
     save_image_safely
 )
-from backend.forensics.services.ela_service import generate_ela_analysis
-from backend.forensics.services.fft_service import generate_fft_analysis
-from backend.forensics.services.model_service import predict_deepfake
-from backend.forensics.services.gradcam_service import generate_gradcam_analysis
+from backend.pipeline.forensics.services.ela_service import generate_ela_analysis
+from backend.pipeline.forensics.services.fft_service import generate_fft_analysis
+from backend.pipeline.forensics.services.model_service import predict_deepfake
+from backend.pipeline.forensics.services.gradcam_service import generate_gradcam_analysis
 
 def run_forensic_pipeline(file_bytes: bytes, filename: str) -> Dict[str, Any]:
     """

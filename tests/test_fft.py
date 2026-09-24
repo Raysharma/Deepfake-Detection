@@ -1,8 +1,8 @@
-﻿import pytest
+import pytest
 import numpy as np
 from PIL import Image
 
-from backend.forensics.services.fft_service import generate_fft_analysis
+from backend.pipeline.forensics.services.fft_service import generate_fft_analysis
 
 @pytest.fixture
 def sample_fft_image():
