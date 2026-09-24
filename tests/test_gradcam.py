@@ -1,9 +1,9 @@
-import pytest
+﻿import pytest
 import numpy as np
 from PIL import Image
 
-from backend.pipeline.forensics.services.gradcam_service import generate_gradcam_analysis
-from backend.pipeline.forensics.services.model_service import HAS_TORCH
+from backend.forensics.services.gradcam_service import generate_gradcam_analysis
+from backend.forensics.services.model_service import HAS_TORCH
 
 @pytest.fixture
 def sample_test_image():

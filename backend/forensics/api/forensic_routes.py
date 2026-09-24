@@ -1,10 +1,10 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, status
+﻿from fastapi import APIRouter, UploadFile, File, HTTPException, status
 import logging
 from typing import Dict, Any
 
-from backend.pipeline.forensics.schemas.forensic_schema import ForensicAnalysisResponse
-from backend.pipeline.forensics.services.forensic_service import run_forensic_pipeline
-from backend.pipeline.forensics.services.model_service import get_or_load_model, HAS_TORCH
+from backend.forensics.schemas.forensic_schema import ForensicAnalysisResponse
+from backend.forensics.services.forensic_service import run_forensic_pipeline
+from backend.forensics.services.model_service import get_or_load_model, HAS_TORCH
 
 try:
     from backend.database import log_scan

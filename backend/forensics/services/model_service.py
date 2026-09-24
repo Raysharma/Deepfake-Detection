@@ -1,4 +1,4 @@
-import os
+﻿import os
 import logging
 from typing import Dict, Any, Optional, Tuple
 from PIL import Image
@@ -11,7 +11,7 @@ try:
 except ImportError:
     HAS_TORCH = False
 
-from backend.pipeline.forensics.utils.image_utils import prepare_model_tensor
+from backend.forensics.utils.image_utils import prepare_model_tensor
 
 logger = logging.getLogger(__name__)
 

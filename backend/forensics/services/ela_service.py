@@ -1,12 +1,12 @@
-import io
+﻿import io
 import os
 import numpy as np
 from PIL import Image, ImageChops, ImageEnhance
 from typing import Dict, Any, Optional
 import cv2
 
-from backend.pipeline.forensics.utils.file_utils import get_artifact_paths
-from backend.pipeline.forensics.utils.image_utils import save_image_safely
+from backend.forensics.utils.file_utils import get_artifact_paths
+from backend.forensics.utils.image_utils import save_image_safely
 
 DEFAULT_QUALITY = 90
 DEFAULT_HIGH_ERROR_THRESHOLD = 20.0  # Empirical threshold for high-error artifact pixels

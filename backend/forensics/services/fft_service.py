@@ -1,10 +1,10 @@
-import numpy as np
+﻿import numpy as np
 import cv2
 from PIL import Image
 from typing import Dict, Any, Optional
 
-from backend.pipeline.forensics.utils.file_utils import get_artifact_paths
-from backend.pipeline.forensics.utils.image_utils import save_image_safely, get_grayscale_array
+from backend.forensics.utils.file_utils import get_artifact_paths
+from backend.forensics.utils.image_utils import save_image_safely, get_grayscale_array
 
 def generate_fft_analysis(
     pil_image: Image.Image,
