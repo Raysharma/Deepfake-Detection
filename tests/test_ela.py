@@ -1,10 +1,10 @@
-﻿import pytest
+import pytest
 import numpy as np
 from PIL import Image
 import os
 import io
 
-from backend.forensics.services.ela_service import generate_ela_analysis
+from backend.pipeline.forensics.services.ela_service import generate_ela_analysis
 
 @pytest.fixture
 def sample_rgb_image():

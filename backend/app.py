@@ -23,9 +23,9 @@ from backend.database import (
 from backend.pipeline.image_pipeline import analyze_image_bytes
 from backend.pipeline.video_pipeline import analyze_video_file
 from backend.pipeline.audio_pipeline import analyze_audio_bytes
-from backend.forensics.api.forensic_routes import router as forensic_router
-from backend.forensics.services.model_service import get_or_load_model
-from backend.forensics.utils.file_utils import ensure_output_directories, OUTPUT_FORENSIC_DIR
+from backend.pipeline.forensics.api.forensic_routes import router as forensic_router
+from backend.pipeline.forensics.services.model_service import get_or_load_model
+from backend.pipeline.forensics.utils.file_utils import ensure_output_directories, OUTPUT_FORENSIC_DIR
 
 # Initialize FastAPI App
 app = FastAPI(
