@@ -23,6 +23,9 @@ from backend.database import (
 from backend.pipeline.image_pipeline import analyze_image_bytes
 from backend.pipeline.video_pipeline import analyze_video_file
 from backend.pipeline.audio_pipeline import analyze_audio_bytes
+from backend.forensics.api.forensic_routes import router as forensic_router
+from backend.forensics.services.model_service import get_or_load_model
+from backend.forensics.utils.file_utils import ensure_output_directories, OUTPUT_FORENSIC_DIR
 
 # Initialize FastAPI App
 app = FastAPI(
@@ -48,6 +51,8 @@ init_db()
 @app.on_event("startup")
 def startup_event():
     init_db()
+    ensure_output_directories()
+    get_or_load_model()
 
 @app.get("/api/health", response_model=SystemHealthResponse, tags=["System"])
 def check_health():
@@ -56,6 +61,7 @@ def check_health():
         "status": "ONLINE",
         "database_connected": True,
         "registered_modules": {
+            "image_forensics": "Active (Independent ELA + 2D FFT + ResNet + Grad-CAM)",
             "image_detector": "Active (ELA + FFT + GradCAM Overlay)",
             "video_detector": "Active (Temporal Jitter & Frame Delta)",
             "audio_detector": "Active (Spectral Flux & MFCC)",
@@ -179,6 +185,13 @@ def submit_feedback(feedback: FeedbackSubmission):
         notes=feedback.notes or ""
     )
     return {"status": "SUCCESS", "feedback_id": feedback_id, "message": "Feedback recorded for active retraining loop."}
+
+# Register Image Forensics Router
+app.include_router(forensic_router)
+
+# Mount forensic artifact outputs directory for web visualization
+forensic_dir = ensure_output_directories()
+app.mount("/outputs/forensic", StaticFiles(directory=forensic_dir), name="forensic_outputs")
 
 # Mount static folder for web dashboard
 static_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")

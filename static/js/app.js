@@ -1,4 +1,4 @@
-let currentModality = 'image';
+let currentModality = 'forensics';
 let currentFile = null;
 let currentScanId = null;
 
@@ -11,10 +11,14 @@ function switchTab(modality) {
   const dropText = document.getElementById('dropText');
   const fileMeta = document.getElementById('fileMeta');
 
-  if (modality === 'image') {
+  if (modality === 'forensics') {
+    dropIcon.innerText = '🔬';
+    dropText.innerText = 'Select or drop an Image (.jpg, .png, .webp)';
+    fileMeta.innerText = 'Multi-Signal Pipeline: ELA Analysis • 2D FFT Spectrum • Deepfake CNN • Grad-CAM';
+  } else if (modality === 'image') {
     dropIcon.innerText = '🖼️';
     dropText.innerText = 'Select or drop an Image (.jpg, .png)';
-    fileMeta.innerText = 'Analyzes facial blending, compression artifacts & 2D FFT';
+    fileMeta.innerText = 'Quick scan: facial blending, compression artifacts & 2D FFT';
   } else if (modality === 'video') {
     dropIcon.innerText = '🎬';
     dropText.innerText = 'Select or drop a Video (.mp4)';
@@ -121,7 +125,7 @@ async function runAnalysis() {
   const formData = new FormData();
   formData.append('file', currentFile);
 
-  const endpoint = `/api/analyze/${currentModality}`;
+  const endpoint = (currentModality === 'forensics') ? '/api/forensics/analyze' : `/api/analyze/${currentModality}`;
 
   try {
     const res = await fetch(endpoint, {
@@ -130,7 +134,8 @@ async function runAnalysis() {
     });
 
     if (!res.ok) {
-      throw new Error(`API error: ${res.statusText}`);
+      const errText = await res.text();
+      throw new Error(`API error (${res.status}): ${errText}`);
     }
 
     const data = await res.json();
@@ -145,10 +150,8 @@ async function runAnalysis() {
 }
 
 function displayResults(data) {
-  currentScanId = data.id;
   document.getElementById('resultsPlaceholder').style.display = 'none';
   document.getElementById('resultsContent').style.display = 'block';
-
   document.getElementById('procTimeBadge').innerText = `Completed in ${data.processing_time_ms}ms`;
 
   const banner = document.getElementById('verdictBanner');
@@ -156,6 +159,83 @@ function displayResults(data) {
   const verdictPercent = document.getElementById('verdictPercent');
   const confidenceFill = document.getElementById('confidenceFill');
   const confidenceLabel = document.getElementById('confidenceLabel');
+  const explanationText = document.getElementById('explanationText');
+  const forensicGrid = document.getElementById('forensicVisualGrid');
+  const heatmapSec = document.getElementById('heatmapSection');
+  const tagList = document.getElementById('tagList');
+
+  // Check if this is the structured Image Forensics response
+  if (data.prediction && data.ela && data.fft) {
+    currentScanId = data.scan_id;
+    const isFake = (data.prediction.label === 'deepfake');
+    const conf = data.prediction.confidence;
+    const pct = (conf * 100).toFixed(1);
+
+    verdictPercent.innerText = `${pct}%`;
+    confidenceLabel.innerText = conf.toFixed(4);
+    confidenceFill.style.width = `${pct}%`;
+
+    if (isFake) {
+      banner.className = 'verdict-banner verdict-fake';
+      verdictText.innerText = `🚨 DEEPFAKE DETECTED`;
+      confidenceFill.style.background = 'var(--accent-red)';
+    } else {
+      banner.className = 'verdict-banner verdict-real';
+      verdictText.innerText = `✅ AUTHENTIC MEDIA`;
+      confidenceFill.style.background = 'var(--accent-green)';
+    }
+
+    explanationText.innerHTML = `<strong>Primary Neural Model:</strong> ${data.prediction.model_architecture} classified image as <strong>${data.prediction.label.toUpperCase()}</strong> with ${pct}% confidence.<br><strong>Forensic Corroboration:</strong> ELA compression error (mean ${data.ela.mean_error}, high-err ratio ${(data.ela.high_error_ratio * 100).toFixed(1)}%) and 2D FFT spectral decay (ratio ${data.fft.high_frequency_ratio}).`;
+
+    // Populate and show 4-card forensic visual grid
+    forensicGrid.style.display = 'block';
+    heatmapSec.style.display = 'none';
+
+    document.getElementById('forensicOriginalImg').src = data.original_image_url;
+    document.getElementById('forensicElaImg').src = data.ela.image_url;
+    document.getElementById('elaMean').innerText = data.ela.mean_error;
+    document.getElementById('elaMax').innerText = data.ela.max_error;
+    document.getElementById('elaHighRatio').innerText = `${(data.ela.high_error_ratio * 100).toFixed(2)}%`;
+
+    document.getElementById('forensicFftImg').src = data.fft.image_url;
+    document.getElementById('fftMean').innerText = data.fft.mean_magnitude;
+    document.getElementById('fftMax').innerText = data.fft.max_magnitude;
+    document.getElementById('fftRatio').innerText = data.fft.high_frequency_ratio;
+
+    if (data.gradcam && data.gradcam.available) {
+      document.getElementById('forensicGradcamImg').src = data.gradcam.heatmap_url;
+      document.getElementById('forensicOverlayImg').src = data.gradcam.overlay_url;
+      document.getElementById('gradcamLayer').innerText = data.gradcam.target_layer || 'layer4';
+      document.getElementById('gradcamTarget').innerText = data.gradcam.target_class || 'deepfake';
+    } else {
+      document.getElementById('gradcamLayer').innerText = 'Unavailable';
+      document.getElementById('gradcamTarget').innerText = 'N/A';
+    }
+
+    tagList.innerHTML = '';
+    const forensicTags = [
+      `Model: ${data.prediction.model_architecture}`,
+      `Confidence: ${pct}%`,
+      `ELA Quality: ${data.ela.quality}`,
+      `2D FFT Spectrum: Active`,
+      `Grad-CAM: ${data.gradcam.target_layer || 'layer4'} Backprop`
+    ];
+    if (data.warnings && data.warnings.length > 0) {
+      data.warnings.forEach(w => forensicTags.push(`⚠️ ${w}`));
+    }
+    forensicTags.forEach(t => {
+      const span = document.createElement('span');
+      span.className = 'tag';
+      span.innerText = t;
+      tagList.appendChild(span);
+    });
+
+    return;
+  }
+
+  // Fallback for legacy modality responses (video, audio, quick-scan)
+  forensicGrid.style.display = 'none';
+  currentScanId = data.id;
 
   const pct = (data.confidence_score * 100).toFixed(1);
   verdictPercent.innerText = `${pct}%`;
@@ -172,10 +252,8 @@ function displayResults(data) {
     confidenceFill.style.background = 'var(--accent-green)';
   }
 
-  document.getElementById('explanationText').innerText = data.explanation;
+  explanationText.innerText = data.explanation;
 
-  // Heatmap check
-  const heatmapSec = document.getElementById('heatmapSection');
   const heatmapImg = document.getElementById('heatmapImg');
   if (data.heatmap_url) {
     heatmapSec.style.display = 'block';

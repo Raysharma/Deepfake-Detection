@@ -67,7 +67,8 @@
         </div>
 
         <div class="tabs">
-          <button class="tab-btn active" onclick="switchTab('image')">🖼️ Image</button>
+          <button class="tab-btn active" onclick="switchTab('forensics')">🔬 Image Forensics</button>
+          <button class="tab-btn" onclick="switchTab('image')">🖼️ Quick Scan</button>
           <button class="tab-btn" onclick="switchTab('video')">🎬 Video</button>
           <button class="tab-btn" onclick="switchTab('audio')">🎙️ Audio</button>
         </div>
@@ -135,10 +136,83 @@
             </div>
           </div>
 
-          <!-- Grad-CAM Heatmap Viewer -->
+          <!-- Dedicated Image Forensics Multi-Signal Grid (ELA • FFT • Grad-CAM • Overlay) -->
+          <div id="forensicVisualGrid" style="display: none; margin-top: 16px;">
+            <div style="font-size: 13px; font-weight: 700; margin-bottom: 8px; color: var(--accent-cyan); display: flex; align-items: center; gap: 6px;">
+              <span>🔬 Multi-Signal Forensic Evidence Suite</span>
+            </div>
+
+            <!-- Original Evidence Hero Display -->
+            <div style="margin-bottom: 12px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+              <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; margin-bottom: 6px; color: var(--text-muted);">
+                <span>Original Uploaded Evidence</span>
+                <span id="forensicOrigDims">Preserved Resolution</span>
+              </div>
+              <div style="max-height: 200px; overflow: hidden; display: flex; justify-content: center; align-items: center; border-radius: 6px; background: #05070a;">
+                <img id="forensicOriginalImg" src="" style="max-height: 200px; width: auto; max-width: 100%; object-fit: contain;" alt="Original Evidence">
+              </div>
+            </div>
+
+            <!-- 4-Card Responsive Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px;">
+              <!-- 1. ELA -->
+              <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 8px; border: 1px solid rgba(167, 139, 250, 0.3);">
+                <div style="font-size: 11px; font-weight: 600; color: #a78bfa; margin-bottom: 4px;">1. ELA Compression</div>
+                <div style="height: 120px; background: #000; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-bottom: 6px;">
+                  <img id="forensicElaImg" src="" style="max-height: 100%; max-width: 100%; object-fit: contain;" alt="ELA Analysis">
+                </div>
+                <div style="font-size: 10px; color: var(--text-muted); line-height: 1.3;">
+                  <div>Mean: <span id="elaMean" style="color: #fff;">--</span></div>
+                  <div>Max: <span id="elaMax" style="color: #fff;">--</span></div>
+                  <div>High-Err: <span id="elaHighRatio" style="color: #fff;">--</span></div>
+                </div>
+              </div>
+
+              <!-- 2. FFT -->
+              <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 8px; border: 1px solid rgba(244, 114, 182, 0.3);">
+                <div style="font-size: 11px; font-weight: 600; color: #f472b6; margin-bottom: 4px;">2. 2D FFT Spectrum</div>
+                <div style="height: 120px; background: #000; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-bottom: 6px;">
+                  <img id="forensicFftImg" src="" style="max-height: 100%; max-width: 100%; object-fit: contain;" alt="2D FFT Spectrum">
+                </div>
+                <div style="font-size: 10px; color: var(--text-muted); line-height: 1.3;">
+                  <div>Mean Mag: <span id="fftMean" style="color: #fff;">--</span></div>
+                  <div>Max Mag: <span id="fftMax" style="color: #fff;">--</span></div>
+                  <div>HF/LF Ratio: <span id="fftRatio" style="color: #fff;">--</span></div>
+                </div>
+              </div>
+
+              <!-- 3. Grad-CAM Raw -->
+              <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 8px; border: 1px solid rgba(251, 191, 36, 0.3);">
+                <div style="font-size: 11px; font-weight: 600; color: #fbbf24; margin-bottom: 4px;">3. Grad-CAM Map</div>
+                <div style="height: 120px; background: #000; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-bottom: 6px;">
+                  <img id="forensicGradcamImg" src="" style="max-height: 100%; max-width: 100%; object-fit: contain;" alt="Grad-CAM Map">
+                </div>
+                <div style="font-size: 10px; color: var(--text-muted); line-height: 1.3;">
+                  <div>Layer: <span id="gradcamLayer" style="color: #fff;">--</span></div>
+                  <div>Target: <span id="gradcamTarget" style="color: #fff;">--</span></div>
+                  <div>Mode: <span style="color: #00f260;">PyTorch ResNet</span></div>
+                </div>
+              </div>
+
+              <!-- 4. Grad-CAM Overlay -->
+              <div style="background: rgba(0,0,0,0.3); padding: 8px; border-radius: 8px; border: 1px solid rgba(0, 242, 254, 0.3);">
+                <div style="font-size: 11px; font-weight: 600; color: var(--accent-cyan); margin-bottom: 4px;">4. Grad-CAM Overlay</div>
+                <div style="height: 120px; background: #000; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-bottom: 6px;">
+                  <img id="forensicOverlayImg" src="" style="max-height: 100%; max-width: 100%; object-fit: contain;" alt="Grad-CAM Overlay">
+                </div>
+                <div style="font-size: 10px; color: var(--text-muted); line-height: 1.3;">
+                  <div>Alpha: <span style="color: #fff;">60/40 Blend</span></div>
+                  <div>Spatial: <span style="color: #fff;">Aligned</span></div>
+                  <div>Method: <span style="color: #00f2fe;">Backpropagation</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grad-CAM Heatmap Viewer (for Quick Scan) -->
           <div id="heatmapSection" style="margin-top: 14px;">
             <div style="font-size: 12px; font-weight: 600; margin-bottom: 6px; display: flex; justify-content: space-between;">
-              <span>Grad-CAM Explainability Heatmap (Artifact Regions)</span>
+              <span>Explainability Heatmap (Artifact Regions)</span>
             </div>
             <div class="heatmap-container">
               <img id="heatmapImg" src="" alt="Grad-CAM Heatmap">
