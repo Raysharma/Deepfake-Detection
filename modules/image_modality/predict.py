@@ -2,6 +2,7 @@
 modules/image_modality/predict.py
 =================================
 Inference Entrypoint for Person 1 (Image & Spatial AI)
+Conforms to common/contracts.py ImageModalityOutput schema.
 """
 
 import os
@@ -13,40 +14,53 @@ if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from common.contracts import ImageModalityOutput
+from modules.image_modality.spatial_detector import analyze_video_frames
 
 
 def predict(video_path: str) -> dict:
     """
-    Analyzes spatial facial frames of the video for blending artifacts and warping.
-    
+    Standardized inference function for Person 1 (Image & Spatial AI).
+    Analyzes video frames for JPEG compression inconsistency (ELA),
+    spectral grid artifacts (2D FFT), and generates Grad-CAM overlays.
+
     Args:
-        video_path (str): Path to the target .mp4 video file.
-        
+        video_path (str): Path to target video file.
+
     Returns:
         dict: Standardized ImageModalityOutput dictionary.
     """
     if not os.path.exists(video_path):
         return ImageModalityOutput(
             is_fake=False,
+            fake_probability=0.0,
+            spatial_score=0.0,
+            frames_analyzed=0,
+            face_detected=False,
+            heatmap_path=None,
+            detected_artifacts=["file_not_found"],
             error_message=f"Video file not found at {video_path}"
         ).to_dict()
 
-    # NOTE: Person 1 will plug their trained EfficientNet model & Grad-CAM logic here.
-    # Current stub provides baseline return contract.
+    raw_result = analyze_video_frames(video_path, max_frames=30)
+
     output = ImageModalityOutput(
-        is_fake=False,
-        fake_probability=0.15,
-        spatial_score=0.15,
-        frames_analyzed=30,
-        face_detected=True,
-        heatmap_path="temp_uploads/sample_face_gradcam.jpg",
-        detected_artifacts=["natural_illumination_consistent"]
+        modality="image_spatial",
+        is_fake=raw_result.get("is_fake", False),
+        fake_probability=raw_result.get("fake_probability", 0.0),
+        spatial_score=raw_result.get("spatial_score", 0.0),
+        frames_analyzed=raw_result.get("frames_analyzed", 0),
+        face_detected=raw_result.get("face_detected", True),
+        heatmap_path=raw_result.get("heatmap_path", None),
+        detected_artifacts=raw_result.get("detected_artifacts", []),
+        error_message=raw_result.get("error_message", None)
     )
+
     return output.to_dict()
 
 
 if __name__ == "__main__":
-    import sys
-    test_path = sys.argv[1] if len(sys.argv) > 1 else "sample.mp4"
-    print("Testing Image Modality on:", test_path)
-    print(predict(test_path))
+    test_path = sys.argv[1] if len(sys.argv) > 1 else "sample_data/real_speaker.mp4"
+    print(f"[*] Testing Image Modality on: {test_path}")
+    res = predict(test_path)
+    import pprint
+    pprint.pprint(res)

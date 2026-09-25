@@ -65,7 +65,8 @@ def run_full_pipeline(video_path: str) -> dict:
 
 
 if __name__ == "__main__":
-    print("Testing Orchestrator with dummy sample video:")
-    result = run_full_pipeline("sample.mp4")
+    target = sys.argv[1] if len(sys.argv) > 1 else "sample_data/real_speaker.mp4"
+    print(f"\n[*] Running Multimodal Aggregation Pipeline on: {target}\n")
+    result = run_full_pipeline(target)
     import pprint
     pprint.pprint(result)
