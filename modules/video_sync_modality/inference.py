@@ -57,8 +57,8 @@ def evaluate_video_lip_sync(
             "error_message": f"File not found: {video_path}"
         }
 
-    # 1. Extract visual mouth frames (96, 96)
-    lip_frames, landmarks_found = extract_lip_rois_from_video(video_path, max_frames=60)
+    # 1. Extract visual mouth frames (128, 128)
+    lip_frames, landmarks_found = extract_lip_rois_from_video(video_path, target_size=(128, 128), max_frames=60)
     total_frames = len(lip_frames)
 
     if total_frames < 5:
@@ -75,63 +75,92 @@ def evaluate_video_lip_sync(
             "error_message": "Video too short for 5-frame sequence analysis."
         }
 
-    # 2. Extract audio acoustic features
-    mfcc_features, audio_samples = extract_audio_and_mfcc(video_path)
+    # 2. Extract audio acoustic features (12 MFCC coefficients)
+    mfcc_features, sr = extract_audio_and_mfcc(video_path, n_mfcc=12)
 
-    # 3. Form 5-frame sliding visual windows
-    # Shape: (N, 5, 96, 96)
+    # 3. Form 5-frame sliding visual windows: shape (N, 3, 5, 128, 128)
     num_sequences = min(total_frames - 5 + 1, 20)
-    visual_batch = np.zeros((num_sequences, 5, 96, 96), dtype=np.float32)
+    visual_batch = np.zeros((num_sequences, 3, 5, 128, 128), dtype=np.float32)
     for i in range(num_sequences):
-        visual_batch[i] = np.stack(lip_frames[i : i + 5], axis=0)
+        seq = np.stack(lip_frames[i : i + 5], axis=0)  # (5, 128, 128)
+        # Duplicate to 3 channels (RGB)
+        seq_3c = np.stack([seq, seq, seq], axis=0)      # (3, 5, 128, 128)
+        visual_batch[i] = seq_3c
 
-    # Audio chunk for corresponding frames (shape: N, 1, 13, 20)
-    audio_batch = np.zeros((num_sequences, 1, 13, 20), dtype=np.float32)
-    for i in range(num_sequences):
-        if i < len(mfcc_features):
-            chunk = mfcc_features[max(0, i - 10) : min(len(mfcc_features), i + 10)]
-            if len(chunk) < 20:
-                chunk = np.pad(chunk, ((0, 20 - len(chunk)), (0, 0)))
-            audio_batch[i, 0] = chunk[:20].T
-        else:
-            audio_batch[i, 0] = np.random.randn(13, 20) * 0.1
-
-    # 4. Feed to SyncNet
     model = get_syncnet_model()
+    model.eval()
+
+    # Pre-compute visual embeddings once (N, 1024)
     with torch.no_grad():
         v_tensor = torch.from_numpy(visual_batch).to(device)
-        a_tensor = torch.from_numpy(audio_batch).to(device)
+        v_emb = model.forward_visual(v_tensor)  # (N, 1024)
 
-        # Baseline feature distance
-        distances = model.compute_distance(v_tensor, a_tensor).cpu().numpy()
-        mean_dist = float(np.mean(distances))
-
-    # 5. Temporal Offset Analysis
-    # Evaluate simulated frame shift variance to find optimal alignment
+    # 4. Search across temporal offsets (e.g. -10 to +10 frames)
+    # 1 video frame = 4 acoustic hops (at 25 fps, 100Hz audio feature rate)
     offsets = list(range(-max_search_offset, max_search_offset + 1))
-    offset_distances = []
-    for off in offsets:
-        # Penalize shift from center
-        sim_dist = mean_dist + 0.04 * abs(off) + np.random.uniform(-0.02, 0.02)
-        offset_distances.append(sim_dist)
+    offset_distances: List[float] = []
 
+    for off in offsets:
+        audio_batch = np.zeros((num_sequences, 1, 12, 20), dtype=np.float32)
+        for i in range(num_sequences):
+            audio_frame_start = (i + off) * 4
+            audio_frame_end = audio_frame_start + 20
+
+            if audio_frame_start >= 0 and audio_frame_end <= len(mfcc_features):
+                chunk = mfcc_features[audio_frame_start:audio_frame_end, :12]
+            elif audio_frame_start < 0:
+                # Pad beginning
+                pad_len = min(20, -audio_frame_start)
+                avail = mfcc_features[:max(0, audio_frame_end), :12]
+                chunk = np.pad(avail, ((pad_len, max(0, 20 - pad_len - len(avail))), (0, 0)))[:20]
+            else:
+                # Pad end
+                avail = mfcc_features[max(0, audio_frame_start):, :12]
+                chunk = np.pad(avail, ((0, max(0, 20 - len(avail))), (0, 0)))[:20]
+
+            if chunk.shape[0] < 20:
+                chunk = np.pad(chunk, ((0, 20 - chunk.shape[0]), (0, 0)))
+
+            audio_batch[i, 0] = chunk[:20, :12].T  # (12, 20)
+
+        with torch.no_grad():
+            a_tensor = torch.from_numpy(audio_batch).to(device)
+            a_emb = model.forward_audio(a_tensor)  # (N, 1024)
+            dists = torch.norm(v_emb - a_emb, dim=1).cpu().numpy()
+            offset_distances.append(float(np.mean(dists)))
+
+    # Find the offset with minimal feature distance
     best_idx = int(np.argmin(offset_distances))
     best_offset = offsets[best_idx]
     min_distance = float(offset_distances[best_idx])
+    zero_offset_idx = offsets.index(0)
+    zero_dist = float(offset_distances[zero_offset_idx])
 
-    # In SyncNet: distance < 0.70 means strong authentic sync.
-    # Distance > 0.85 or |offset| >= 4 frames indicates desynchronized deepfake / dubbing.
-    is_fake = bool(min_distance > 0.85 or abs(best_offset) >= 4)
-    fake_prob = float(np.clip((min_distance - 0.5) * 1.5 + (0.3 if abs(best_offset) >= 4 else 0.0), 0.05, 0.95))
-    sync_conf = float(np.clip(1.0 - fake_prob, 0.05, 0.98))
+    # Classification Calibration:
+    # Human speech and video encoders typically have standard broadcast tolerance of ±6 frames (±240ms).
+    # Desynchronized deepfakes, re-dubbing, or manipulated lip synthesis show severe temporal delays (|offset| >= 8)
+    # or elevated cross-modal distance (min_distance > 0.65).
+    is_fake = bool(abs(best_offset) >= 8 or min_distance > 0.65)
+
+    if is_fake:
+        # High fake probability based on severity of lag
+        severity = min(abs(best_offset) / 12.0, 1.0)
+        fake_prob = float(np.clip(0.82 + 0.15 * severity, 0.75, 0.98))
+        sync_conf = float(np.clip(1.0 - fake_prob, 0.02, 0.25))
+    else:
+        # Authentic: low fake probability, high synchrony confidence
+        fake_prob = float(np.clip(min_distance * 0.28, 0.04, 0.18))
+        sync_conf = float(np.clip(1.0 - fake_prob, 0.82, 0.98))
 
     detected_anomalies = []
     if is_fake:
-        detected_anomalies.append("Lip-Sync Mismatch: Visual mouth movements do not match audio phonemes")
-        if abs(best_offset) >= 3:
-            detected_anomalies.append(f"Significant temporal delay of {best_offset} frames detected")
+        detected_anomalies.append("Lip-Sync Mismatch: Mouth shapes do not correspond with spoken phonemes")
+        if abs(best_offset) >= 8:
+            detected_anomalies.append(f"Significant temporal delay detected: {best_offset} frames offset")
+        if min_distance > 0.65:
+            detected_anomalies.append(f"High cross-modal feature divergence: distance={min_distance:.4f}")
     else:
-        detected_anomalies.append("Audio-Visual Synchrony Confirmed (mouth motions align with vocal energy)")
+        detected_anomalies.append("Audio-Visual Synchrony Confirmed (mouth phonemes and acoustic timing align)")
 
     return {
         "is_fake": is_fake,

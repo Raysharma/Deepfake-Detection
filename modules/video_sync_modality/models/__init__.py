@@ -1,3 +1,3 @@
-from .syncnet import SyncNet, VisualStreamNet, AudioStreamNet
+from .syncnet import SyncNet
 
-__all__ = ["SyncNet", "VisualStreamNet", "AudioStreamNet"]
+__all__ = ["SyncNet"]

@@ -88,8 +88,7 @@ def extract_lip_rois_from_video(
     # Attempt to initialize MediaPipe FaceMesh
     face_mesh = None
     try:
-        import mediapipe as mp
-        mp_face_mesh = mp.solutions.face_mesh
+        import mediapipe.python.solutions.face_mesh as mp_face_mesh
         face_mesh = mp_face_mesh.FaceMesh(
             static_image_mode=False,
             max_num_faces=1,
