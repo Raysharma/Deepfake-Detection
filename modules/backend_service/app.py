@@ -14,7 +14,6 @@ app = FastAPI(
     description="Backend API for the Multimodal Deepfake Detection System",
     version="1.0.0",
 )
-app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -37,12 +36,6 @@ ALLOWED_EXTENSIONS = {
 }
 
 
-@app.get("/")
-def root():
-    return {
-        "status": "running",
-        "message": "Deepfake Detection Backend is running."
-    }
 
 
 @app.get("/api/v1/health")
@@ -105,3 +98,6 @@ def get_task_status(task_id: str):
         response["error"] = str(task.result)
 
     return response
+
+# Mount frontend at the very bottom so API routes take priority!
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
