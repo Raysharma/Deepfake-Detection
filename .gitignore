@@ -59,3 +59,13 @@ data/processed/
 Thumbs.db
 *.log
 sample_mouth_preview.jpg
+
+# ASVspoof dataset
+LA/
+LA.zip
+
+# Audio training cache
+modules/audio_modality/cache/
+
+# Model checkpoints
+modules/audio_modality/checkpoints/
