@@ -63,22 +63,14 @@ async def upload_file(file: UploadFile = File(...)):
         while chunk := await file.read(1024 * 1024):
             buffer.write(chunk)
 
-    # Step 2: Try Celery/Redis if available, otherwise analyze immediately
-    try:
-        task = run_deepfake_analysis.delay(str(file_path))
-        return {
-            "status": "processing",
-            "filename": file.filename,
-            "task_id": task.id
-        }
-    except Exception:
-        # Direct execution (Zero Redis/Celery setup needed!)
-        result = run_full_pipeline(str(file_path))
-        return {
-            "status": "completed",
-            "filename": file.filename,
-            "result": result
-        }
+        # Step 2: Direct High-Speed Execution (Zero Redis timeout!)
+    result = run_full_pipeline(str(file_path))
+    return {
+        "status": "completed",
+        "filename": file.filename,
+        "result": result
+    }
+
 
 
 
@@ -98,6 +90,11 @@ def get_task_status(task_id: str):
         response["error"] = str(task.result)
 
     return response
+
+# Serve generated forensic heatmaps (Grad-CAM & Spectrograms)
+import os
+os.makedirs("temp_uploads", exist_ok=True)
+app.mount("/temp_uploads", StaticFiles(directory="temp_uploads"), name="temp_uploads")
 
 # Mount frontend at the very bottom so API routes take priority!
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")

@@ -47,6 +47,7 @@
 
             <div class="drop-zone" id="dropZone">
                 <input type="file" id="fileInput" accept=".mp4,.avi,.mov,.jpg,.jpeg,.png,.wav,.mp3" hidden />
+
                 <div class="drop-content" id="dropContent">
                     <div class="upload-icon-circle">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -56,12 +57,21 @@
                         </svg>
                     </div>
                     <p class="drop-main-text">Drag & drop media here, or <span class="browse-link">browse</span></p>
-                    <span class="file-hint">Analyzed locally via Image ELA/FFT, Audio CNN & SyncNet</span>
+                    <span class="file-hint">Analyzed locally via Image ELA/FFT, Audio Mel-CNN & SyncNet</span>
                 </div>
 
-                <!-- Preview Zone -->
+                <!-- Preview Zone with Live Cyber Laser Overlay -->
                 <div class="preview-zone hidden" id="previewZone">
-                    <div class="preview-media-container" id="mediaContainer"></div>
+                    <div class="preview-media-container" id="mediaContainer">
+                        <div class="scanner-overlay hidden" id="scannerOverlay">
+                            <div class="laser-beam"></div>
+                            <div class="scanner-hud">
+                                <div class="hud-spinner"></div>
+                                <div class="hud-text" id="hudStatus">Initializing Neural Models...</div>
+                                <div class="hud-sub">Multimodal Analysis in Progress</div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="preview-meta">
                         <span id="previewName" class="file-name">filename.mp4</span>
                         <span id="previewSize" class="file-size">0 MB</span>
@@ -78,17 +88,6 @@
                     </svg>
                 </button>
             </div>
-        </section>
-
-        <!-- Scanning State -->
-        <section class="card scanning-card hidden" id="scanningCard">
-            <div class="scanner-wrapper">
-                <div class="radar-scan"></div>
-                <div class="scan-pulse"></div>
-            </div>
-            <h3 class="scanning-title">Running Multimodal Tri-Fusion Pipeline...</h3>
-            <p class="scanning-step" id="scanningStep">Extracting spatial frames, audio mel-spectrogram & lip phonemes
-            </p>
         </section>
 
         <!-- Results Section -->
@@ -188,6 +187,70 @@
                 </div>
 
             </div>
+
+            <!-- FORENSIC EVIDENCE & EXPLAINABILITY DRAWER -->
+            <div class="evidence-container">
+                <button class="btn-evidence-toggle" id="btnToggleEvidence">
+                    <span class="evidence-icon">🔬</span>
+                    <span class="evidence-btn-text">Inspect Deep Forensic Evidence & Explainability Heatmaps</span>
+                    <span class="chevron" id="evidenceChevron">▼</span>
+                </button>
+
+                <div class="evidence-drawer hidden" id="evidenceDrawer">
+                    <div class="evidence-grid">
+
+                        <!-- Evidence 1: Facial Spatial Grad-CAM -->
+                        <div class="evidence-card" id="evidenceFaceCard">
+                            <div class="evidence-card-header">
+                                <span class="evidence-badge">Modality 1 Explainability</span>
+                                <span class="evidence-type">Facial Spatial Heatmap</span>
+                            </div>
+                            <div class="evidence-media-wrapper">
+                                <img id="evidenceFaceImg" src="" alt="Spatial Grad-CAM Heatmap" />
+                                <div class="evidence-overlay-tag">Grad-CAM Spatial Heatmap</div>
+                            </div>
+                            <p class="evidence-caption">
+                                Highlights boundary seams, ELA compression discontinuity, and synthetic GAN artifacts
+                                across facial landmarks.
+                            </p>
+                        </div>
+
+                        <!-- Evidence 2: Audio Spectrogram Heatmap -->
+                        <div class="evidence-card" id="evidenceAudioCard">
+                            <div class="evidence-card-header">
+                                <span class="evidence-badge">Modality 2 Explainability</span>
+                                <span class="evidence-type">Acoustic Mel-Spectrogram</span>
+                            </div>
+                            <div class="evidence-media-wrapper">
+                                <img id="evidenceAudioImg" src="" alt="Audio Mel-Spectrogram Heatmap" />
+                                <div class="evidence-overlay-tag">Mel-Spectrogram Heatmap</div>
+                            </div>
+                            <p class="evidence-caption">
+                                Visualizes 128-band Mel frequency activations and acoustic anomalies in speech harmonics
+                                vs. neural TTS voice synthesis.
+                            </p>
+                        </div>
+
+                        <!-- Evidence 3: SyncNet Cross-Correlation Radar (Your Work) -->
+                        <div class="evidence-card" id="evidenceSyncCard">
+                            <div class="evidence-card-header">
+                                <span class="evidence-badge">Modality 3 Explainability</span>
+                                <span class="evidence-type">SyncNet Cross-Correlation Curve</span>
+                            </div>
+                            <div class="evidence-media-wrapper sync-radar-wrapper">
+                                <canvas id="syncCanvas" width="300" height="180"></canvas>
+                                <div class="sync-offset-badge" id="syncRadarBadge">0 frames delay</div>
+                            </div>
+                            <p class="evidence-caption">
+                                Evaluates audio-visual synchrony across a ±10 frame search window. High peaks at 0
+                                indicate genuine speech; shifted/flat curves flag Wav2Lip desync.
+                            </p>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
         </section>
 
     </main>

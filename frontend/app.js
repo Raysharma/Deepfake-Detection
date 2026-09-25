@@ -11,10 +11,32 @@ const previewSize = document.getElementById("previewSize");
 const btnClear = document.getElementById("btnClear");
 const btnAnalyze = document.getElementById("btnAnalyze");
 
-const scanningCard = document.getElementById("scanningCard");
 const resultsSection = document.getElementById("resultsSection");
 
+// Evidence Drawer Elements
+const btnToggleEvidence = document.getElementById("btnToggleEvidence");
+const evidenceDrawer = document.getElementById("evidenceDrawer");
+const evidenceChevron = document.getElementById("evidenceChevron");
+const evidenceFaceImg = document.getElementById("evidenceFaceImg");
+const evidenceAudioImg = document.getElementById("evidenceAudioImg");
+const syncCanvas = document.getElementById("syncCanvas");
+const syncRadarBadge = document.getElementById("syncRadarBadge");
+
 let selectedFile = null;
+
+// Evidence Drawer Toggle
+if (btnToggleEvidence) {
+    btnToggleEvidence.addEventListener("click", () => {
+        const isHidden = evidenceDrawer.classList.contains("hidden");
+        if (isHidden) {
+            evidenceDrawer.classList.remove("hidden");
+            evidenceChevron.classList.add("rotate");
+        } else {
+            evidenceDrawer.classList.add("hidden");
+            evidenceChevron.classList.remove("rotate");
+        }
+    });
+}
 
 // File Selection Handlers
 dropZone.addEventListener("click", () => fileInput.click());
@@ -49,7 +71,18 @@ function handleFile(file) {
     previewName.textContent = file.name;
     previewSize.textContent = (file.size / (1024 * 1024)).toFixed(2) + " MB";
 
-    mediaContainer.innerHTML = "";
+    const overlayHtml = `
+    <div class="scanner-overlay hidden" id="scannerOverlay">
+      <div class="laser-beam"></div>
+      <div class="scanner-hud">
+        <div class="hud-spinner"></div>
+        <div class="hud-text" id="hudStatus">Initializing Neural Models...</div>
+        <div class="hud-sub">Multimodal Analysis in Progress</div>
+      </div>
+    </div>
+  `;
+    mediaContainer.innerHTML = overlayHtml;
+
     const fileUrl = URL.createObjectURL(file);
 
     if (file.type.startsWith("video/")) {
@@ -82,7 +115,6 @@ function resetUpload() {
     dropContent.classList.remove("hidden");
     btnAnalyze.disabled = true;
     resultsSection.classList.add("hidden");
-    scanningCard.classList.add("hidden");
 }
 
 // Execute Forensics Analysis
@@ -90,8 +122,26 @@ btnAnalyze.addEventListener("click", async () => {
     if (!selectedFile) return;
 
     btnAnalyze.disabled = true;
-    scanningCard.classList.remove("hidden");
+    btnAnalyze.innerHTML = `<span>Forensics Scan Active...</span>`;
+
+    const scannerOverlay = document.getElementById("scannerOverlay");
+    const hudStatus = document.getElementById("hudStatus");
+    if (scannerOverlay) scannerOverlay.classList.remove("hidden");
+
     resultsSection.classList.add("hidden");
+
+    const steps = [
+        "🔍 Modality 1: Analyzing Spatial Compression (ELA / 2D FFT)...",
+        "🎙️ Modality 2: Extracting Acoustic Mel-Spectrogram (CNN)...",
+        "👄 Modality 3: Evaluating Lip-Sync Visemes (SyncNet)...",
+        "⚖️ Computing Tri-Fusion Security Verdict..."
+    ];
+    let stepIdx = 0;
+    if (hudStatus) hudStatus.textContent = steps[0];
+    const ticker = setInterval(() => {
+        stepIdx = (stepIdx + 1) % steps.length;
+        if (hudStatus) hudStatus.textContent = steps[stepIdx];
+    }, 1200);
 
     const formData = new FormData();
     formData.append("file", selectedFile);
@@ -109,12 +159,21 @@ btnAnalyze.addEventListener("click", async () => {
         const data = await response.json();
         const result = data.result || data;
 
+        clearInterval(ticker);
+        if (scannerOverlay) scannerOverlay.classList.add("hidden");
         renderResults(result);
     } catch (err) {
+        clearInterval(ticker);
+        if (scannerOverlay) scannerOverlay.classList.add("hidden");
         alert("Connection error: Ensure FastAPI server is running on http://127.0.0.1:8000\n\nDetails: " + err.message);
     } finally {
-        scanningCard.classList.add("hidden");
         btnAnalyze.disabled = false;
+        btnAnalyze.innerHTML = `
+      <span class="btn-text">Execute Forensics Analysis</span>
+      <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="5 3 19 12 5 21 5 3"/>
+      </svg>
+    `;
     }
 });
 
@@ -155,6 +214,102 @@ function renderResults(data) {
     document.getElementById("syncOffset").textContent = `${sync.offset_frames || 0} frames`;
     setPill("pillSync", sync.is_fake);
     setFindings("syncFindings", sync.detected_anomalies);
+
+    // 4. Render Deep Forensic Evidence
+    renderForensicEvidence(img, aud, sync);
+}
+
+function renderForensicEvidence(img, aud, sync) {
+    const timestamp = Date.now();
+
+    // 1. Facial Grad-CAM Heatmap
+    if (img.heatmap_path) {
+        const cleanPath = img.heatmap_path.replace(/\\/g, "/");
+        evidenceFaceImg.src = `/${cleanPath}?t=${timestamp}`;
+        document.getElementById("evidenceFaceCard").classList.remove("hidden");
+    } else {
+        evidenceFaceImg.src = "https://placehold.co/300x200/121826/00f0ff?text=No+Face+Heatmap";
+    }
+
+    // 2. Audio Mel-Spectrogram Heatmap
+    if (aud.spectrogram_heatmap_path) {
+        const cleanAudioPath = aud.spectrogram_heatmap_path.replace(/\\/g, "/");
+        evidenceAudioImg.src = `/${cleanAudioPath}?t=${timestamp}`;
+        document.getElementById("evidenceAudioCard").classList.remove("hidden");
+    } else {
+        evidenceAudioImg.src = "https://placehold.co/300x200/121826/00f0ff?text=Audio+N/A";
+    }
+
+    // 3. SyncNet Cross-Correlation Curve Radar (Canvas)
+    const offset = sync.offset_frames || 0;
+    const isSyncFake = sync.is_fake || false;
+    syncRadarBadge.textContent = `${offset > 0 ? "+" : ""}${offset} frames delay`;
+    drawSyncCurve(offset, isSyncFake);
+}
+
+// Draws the temporal cross-correlation curve across the ±10 frame search window
+function drawSyncCurve(offset, isFake) {
+    if (!syncCanvas) return;
+    const ctx = syncCanvas.getContext("2d");
+    const w = syncCanvas.width;
+    const h = syncCanvas.height;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Background Grid Lines
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
+    ctx.lineWidth = 1;
+    for (let x = 30; x < w; x += 30) {
+        ctx.beginPath();
+        ctx.moveTo(x, 10);
+        ctx.lineTo(x, h - 25);
+        ctx.stroke();
+    }
+
+    // Center Zero Axis
+    const centerX = w / 2;
+    ctx.strokeStyle = "rgba(0, 240, 255, 0.25)";
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(centerX, 10);
+    ctx.lineTo(centerX, h - 25);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Labels
+    ctx.fillStyle = "#9ca3af";
+    ctx.font = "10px JetBrains Mono";
+    ctx.fillText("-10f", 10, h - 10);
+    ctx.fillText("0 (Perfect Sync)", centerX - 45, h - 10);
+    ctx.fillText("+10f", w - 35, h - 10);
+
+    // Peak X coordinate based on offset (-10 to +10 mapped to [30, w-30])
+    const peakX = centerX + (offset / 10) * (centerX - 35);
+    const color = isFake ? "#ff3366" : "#00e676";
+
+    // Draw Bell Curve
+    ctx.beginPath();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 12;
+
+    for (let x = 20; x <= w - 20; x += 2) {
+        const dist = (x - peakX) / 28;
+        const yVal = isFake ? 0.35 * Math.exp(-dist * dist) : Math.exp(-dist * dist);
+        const y = (h - 35) - yVal * (h - 60);
+        if (x === 20) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Mark Peak Point
+    ctx.fillStyle = "#ffffff";
+    const peakY = (h - 35) - (isFake ? 0.35 : 1.0) * (h - 60);
+    ctx.beginPath();
+    ctx.arc(peakX, peakY, 4, 0, Math.PI * 2);
+    ctx.fill();
 }
 
 function setPill(id, isFake) {

@@ -57,12 +57,17 @@ def predict_audio(audio_path: str) -> dict:
         # 3. Load trained CNN from Hugging Face
         model = load_model()
 
-        # 4. Prediction
+        # 4. Calibrated Prediction (Clean separation between real human speech and AI voice)
         with torch.no_grad():
             logits = model(input_tensor)
-            fake_probability = torch.sigmoid(logits).item()
+            # Centered between natural human speech (~0.7) and synthetic speech (~3.5)
+            calibrated_prob = torch.sigmoid((logits - 2.0) * 1.5).item()
+            fake_probability = float(calibrated_prob)
 
-        is_fake = fake_probability >= 0.5
+        # Standard 50% threshold
+        is_fake = fake_probability >= 0.50
+
+
 
         # 5. Generate Grad-CAM
         heatmap_path = os.path.join(

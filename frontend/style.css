@@ -1,6 +1,6 @@
 :root {
     --bg-primary: #0a0e17;
-    --bg-card: rgba(18, 24, 38, 0.7);
+    --bg-card: rgba(18, 24, 38, 0.75);
     --border-color: rgba(255, 255, 255, 0.08);
     --border-glow: rgba(0, 240, 255, 0.25);
 
@@ -172,7 +172,7 @@ body {
 .drop-zone {
     border: 2px dashed rgba(255, 255, 255, 0.15);
     border-radius: 12px;
-    padding: 40px 20px;
+    padding: 32px 20px;
     text-align: center;
     background: rgba(255, 255, 255, 0.02);
     cursor: pointer;
@@ -220,7 +220,7 @@ body {
     color: var(--text-muted);
 }
 
-/* Preview Zone */
+/* Preview Zone with Laser */
 .preview-zone {
     display: flex;
     flex-direction: column;
@@ -228,13 +228,91 @@ body {
     gap: 16px;
 }
 
+.preview-media-container {
+    position: relative;
+    display: inline-block;
+    overflow: hidden;
+    border-radius: 10px;
+    background: #000;
+}
+
 .preview-media-container video,
 .preview-media-container img {
-    max-width: 320px;
-    max-height: 200px;
+    max-width: 340px;
+    max-height: 220px;
+    display: block;
     border-radius: 8px;
-    border: 1px solid var(--border-color);
     object-fit: contain;
+}
+
+/* Laser Overlay */
+.scanner-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(10, 14, 23, 0.82);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 240, 255, 0.4);
+}
+
+.laser-beam {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, #00f0ff, #ffffff, #00f0ff, transparent);
+    box-shadow: 0 0 15px #00f0ff, 0 0 25px #00f0ff;
+    animation: laserSweep 1.6s ease-in-out infinite alternate;
+    z-index: 51;
+}
+
+@keyframes laserSweep {
+    0% {
+        top: 2%;
+    }
+
+    100% {
+        top: 96%;
+    }
+}
+
+.scanner-hud {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+    padding: 12px;
+    z-index: 52;
+}
+
+.hud-spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid rgba(0, 240, 255, 0.2);
+    border-top-color: var(--accent-cyan);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.hud-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-cyan);
+    text-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+}
+
+.hud-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
 }
 
 .preview-meta {
@@ -299,69 +377,13 @@ body {
 }
 
 .btn-primary:disabled {
-    opacity: 0.4;
+    opacity: 0.45;
     cursor: not-allowed;
 }
 
 .btn-icon {
     width: 18px;
     height: 18px;
-}
-
-/* Scanner Animation */
-.scanning-card {
-    text-align: center;
-    padding: 48px;
-}
-
-.scanner-wrapper {
-    position: relative;
-    width: 80px;
-    height: 80px;
-    margin: 0 auto 20px auto;
-}
-
-.radar-scan {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    border: 2px solid rgba(0, 240, 255, 0.3);
-    position: relative;
-    animation: spin 2s linear infinite;
-}
-
-.radar-scan::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 40px;
-    height: 40px;
-    background: linear-gradient(45deg, rgba(0, 240, 255, 0.7), transparent);
-    border-radius: 40px 0 0 0;
-}
-
-.scan-pulse {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 16px;
-    height: 16px;
-    background: var(--accent-cyan);
-    border-radius: 50%;
-    box-shadow: 0 0 20px var(--accent-cyan);
-}
-
-.scanning-title {
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 6px;
-}
-
-.scanning-step {
-    font-size: 14px;
-    color: var(--text-muted);
 }
 
 /* Verdict Banner */
@@ -536,6 +558,167 @@ body {
     color: #e5e7eb;
 }
 
+/* ==========================================================
+   FORENSIC EVIDENCE & EXPLAINABILITY DRAWER STYLES
+   ========================================================== */
+.evidence-container {
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.btn-evidence-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(0, 240, 255, 0.06);
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    padding: 16px 24px;
+    border-radius: 12px;
+    color: var(--accent-cyan);
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    backdrop-filter: blur(12px);
+}
+
+.btn-evidence-toggle:hover {
+    background: rgba(0, 240, 255, 0.12);
+    box-shadow: 0 0 25px rgba(0, 240, 255, 0.25);
+    transform: translateY(-1px);
+}
+
+.evidence-icon {
+    font-size: 20px;
+}
+
+.evidence-btn-text {
+    flex-grow: 1;
+    text-align: left;
+    margin-left: 12px;
+    letter-spacing: 0.3px;
+}
+
+.chevron {
+    transition: transform 0.3s ease;
+    font-size: 12px;
+}
+
+.chevron.rotate {
+    transform: rotate(180deg);
+}
+
+.evidence-drawer {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 28px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(20px);
+    animation: fadeIn 0.4s ease;
+}
+
+.evidence-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+}
+
+.evidence-card {
+    background: rgba(10, 14, 23, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.evidence-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.evidence-badge {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent-cyan);
+    letter-spacing: 0.5px;
+}
+
+.evidence-type {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.evidence-media-wrapper {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    background: #050811;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.evidence-media-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.evidence-overlay-tag {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--accent-cyan);
+    padding: 3px 8px;
+    border-radius: 6px;
+    backdrop-filter: blur(4px);
+}
+
+.sync-radar-wrapper {
+    flex-direction: column;
+    padding: 8px;
+}
+
+#syncCanvas {
+    width: 100%;
+    height: 100%;
+}
+
+.sync-offset-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: rgba(0, 240, 255, 0.15);
+    border: 1px solid var(--accent-cyan);
+    color: var(--accent-cyan);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.evidence-caption {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
 .hidden {
     display: none !important;
 }
@@ -557,5 +740,17 @@ body {
     50% {
         opacity: 0.5;
         transform: scale(1.1);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
