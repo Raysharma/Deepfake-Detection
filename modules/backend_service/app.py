@@ -1,10 +1,12 @@
 from pathlib import Path
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
-
+from .orchestrator import run_full_pipeline
+from fastapi.middleware.cors import CORSMiddleware
 from .config import UPLOAD_DIR
 from celery.result import AsyncResult
 from .celery_worker import celery_app, run_deepfake_analysis
+from fastapi.staticfiles import StaticFiles
 
 
 app = FastAPI(
@@ -12,6 +14,15 @@ app = FastAPI(
     description="Backend API for the Multimodal Deepfake Detection System",
     version="1.0.0",
 )
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 
 ALLOWED_EXTENSIONS = {
@@ -54,17 +65,28 @@ async def upload_file(file: UploadFile = File(...)):
 
     file_path = UPLOAD_DIR / file.filename
 
+    # Step 1: Save the uploaded file to disk first!
     with file_path.open("wb") as buffer:
         while chunk := await file.read(1024 * 1024):
             buffer.write(chunk)
 
-    task = run_deepfake_analysis.delay(str(file_path))
-    return {
-        "status": "processing",
-        "filename": file.filename,
-        "path": str(file_path),
-        "task_id": task.id
-    }
+    # Step 2: Try Celery/Redis if available, otherwise analyze immediately
+    try:
+        task = run_deepfake_analysis.delay(str(file_path))
+        return {
+            "status": "processing",
+            "filename": file.filename,
+            "task_id": task.id
+        }
+    except Exception:
+        # Direct execution (Zero Redis/Celery setup needed!)
+        result = run_full_pipeline(str(file_path))
+        return {
+            "status": "completed",
+            "filename": file.filename,
+            "result": result
+        }
+
 
 
 @app.get("/api/v1/status/{task_id}")

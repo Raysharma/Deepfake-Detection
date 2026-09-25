@@ -58,7 +58,7 @@ def evaluate_video_lip_sync(
         }
 
     # 1. Extract visual mouth frames (128, 128)
-    lip_frames, landmarks_found = extract_lip_rois_from_video(video_path, target_size=(128, 128), max_frames=60)
+    lip_frames, landmarks_found = extract_lip_rois_from_video(video_path, target_size=(128, 128), max_frames=25)
     total_frames = len(lip_frames)
 
     if total_frames < 5:

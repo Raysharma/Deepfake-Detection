@@ -17,28 +17,23 @@ HF_REPO_ID = "Somya09/deepfake-audio-cnn"
 MODEL_FILENAME = "audio_cnn_best.pth"
 
 
+_AUDIO_MODEL = None
+
 def load_model():
-    # Download model from Hugging Face.
-    # Hugging Face caches the file locally after the first download.
+    global _AUDIO_MODEL
+    if _AUDIO_MODEL is not None:
+        return _AUDIO_MODEL
+
     model_path = hf_hub_download(
         repo_id=HF_REPO_ID,
         filename=MODEL_FILENAME
     )
-
     model = create_model().to(DEVICE)
-
-    checkpoint = torch.load(
-        model_path,
-        map_location=DEVICE
-    )
-
-    model.load_state_dict(
-        checkpoint["model_state_dict"]
-    )
-
+    checkpoint = torch.load(model_path, map_location=DEVICE)
+    model.load_state_dict(checkpoint["model_state_dict"])
     model.eval()
-
-    return model
+    _AUDIO_MODEL = model
+    return _AUDIO_MODEL
 
 
 def predict_audio(audio_path: str) -> dict:

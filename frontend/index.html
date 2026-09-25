@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DeepShield AI — Multimodal Deepfake Forensics</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <div class="ambient-glow glow-1"></div>
+    <div class="ambient-glow glow-2"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="brand">
+            <div class="brand-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    <path d="M9 12l2 2 4-4" />
+                </svg>
+            </div>
+            <div>
+                <h1 class="brand-title">DeepShield <span class="gradient-text">AI</span></h1>
+                <p class="brand-subtitle">Multimodal Deepfake Detection System</p>
+            </div>
+        </div>
+        <div class="status-indicator">
+            <span class="status-dot"></span>
+            <span class="status-text">Core API Active</span>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-container">
+
+        <!-- Upload Section -->
+        <section class="card upload-card">
+            <h2 class="section-title">Upload Media for Inspection</h2>
+            <p class="section-desc">Supports MP4, AVI, MOV videos • JPG, PNG images • WAV, MP3 audio</p>
+
+            <div class="drop-zone" id="dropZone">
+                <input type="file" id="fileInput" accept=".mp4,.avi,.mov,.jpg,.jpeg,.png,.wav,.mp3" hidden />
+                <div class="drop-content" id="dropContent">
+                    <div class="upload-icon-circle">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                    </div>
+                    <p class="drop-main-text">Drag & drop media here, or <span class="browse-link">browse</span></p>
+                    <span class="file-hint">Analyzed locally via Image ELA/FFT, Audio CNN & SyncNet</span>
+                </div>
+
+                <!-- Preview Zone -->
+                <div class="preview-zone hidden" id="previewZone">
+                    <div class="preview-media-container" id="mediaContainer"></div>
+                    <div class="preview-meta">
+                        <span id="previewName" class="file-name">filename.mp4</span>
+                        <span id="previewSize" class="file-size">0 MB</span>
+                        <button class="btn-clear" id="btnClear">Change Media</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="btn-primary" id="btnAnalyze" disabled>
+                    <span class="btn-text">Execute Forensics Analysis</span>
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- Scanning State -->
+        <section class="card scanning-card hidden" id="scanningCard">
+            <div class="scanner-wrapper">
+                <div class="radar-scan"></div>
+                <div class="scan-pulse"></div>
+            </div>
+            <h3 class="scanning-title">Running Multimodal Tri-Fusion Pipeline...</h3>
+            <p class="scanning-step" id="scanningStep">Extracting spatial frames, audio mel-spectrogram & lip phonemes
+            </p>
+        </section>
+
+        <!-- Results Section -->
+        <section class="results-section hidden" id="resultsSection">
+
+            <!-- Big Verdict Banner -->
+            <div class="verdict-banner" id="verdictBanner">
+                <div class="verdict-meta">
+                    <span class="verdict-tag">OVERALL SYSTEM VERDICT</span>
+                    <h2 class="verdict-title" id="verdictTitle">AUTHENTIC</h2>
+                    <p class="verdict-summary" id="verdictSummary">No signs of synthetic face manipulation or
+                        desynchronization.</p>
+                </div>
+                <div class="verdict-score-box">
+                    <span class="score-label">Deepfake Probability</span>
+                    <div class="score-value" id="verdictScore">0%</div>
+                    <div class="time-elapsed" id="verdictTime">Time: 1.4s</div>
+                </div>
+            </div>
+
+            <!-- 3 Modality Breakdown Cards -->
+            <div class="modalities-grid">
+
+                <!-- 1. Image Modality Card -->
+                <div class="modality-card" id="cardImage">
+                    <div class="modality-header">
+                        <div class="modality-badge">🖼️ Modality 1</div>
+                        <span class="status-pill" id="pillImage">Pass</span>
+                    </div>
+                    <h3 class="modality-name">Image Spatial Forensics</h3>
+                    <p class="modality-desc">Analyzes JPEG compression boundary inconsistency (ELA) & 2D FFT spectral
+                        grid periodicity.</p>
+                    <div class="metric-row">
+                        <span>Fake Probability:</span>
+                        <strong id="imgFakeProb">0%</strong>
+                    </div>
+                    <div class="metric-row">
+                        <span>Frames Analyzed:</span>
+                        <strong id="imgFrames">0</strong>
+                    </div>
+                    <div class="findings-box">
+                        <span class="findings-title">Detected Signals:</span>
+                        <ul class="findings-list" id="imgFindings">
+                            <li>Natural illumination consistent</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 2. Audio Modality Card -->
+                <div class="modality-card" id="cardAudio">
+                    <div class="modality-header">
+                        <div class="modality-badge">🎙️ Modality 2</div>
+                        <span class="status-pill" id="pillAudio">Pass</span>
+                    </div>
+                    <h3 class="modality-name">Audio Acoustic CNN</h3>
+                    <p class="modality-desc">Mel-Spectrogram convolutional analysis to identify synthetic neural voice
+                        synthesis artifacts.</p>
+                    <div class="metric-row">
+                        <span>Fake Probability:</span>
+                        <strong id="audFakeProb">0%</strong>
+                    </div>
+                    <div class="metric-row">
+                        <span>Sample Duration:</span>
+                        <strong id="audDuration">4.0s</strong>
+                    </div>
+                    <div class="findings-box">
+                        <span class="findings-title">Detected Signals:</span>
+                        <ul class="findings-list" id="audFindings">
+                            <li>Natural acoustic harmonics</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 3. Lip-Sync Modality Card (Your Work) -->
+                <div class="modality-card" id="cardSync">
+                    <div class="modality-header">
+                        <div class="modality-badge">👄 Modality 3 (SyncNet)</div>
+                        <span class="status-pill" id="pillSync">Pass</span>
+                    </div>
+                    <h3 class="modality-name">Audio-Visual Lip-Sync</h3>
+                    <p class="modality-desc">SyncNet cross-correlation between spoken MFCC audio phonemes and MediaPipe
+                        mouth visual motion.</p>
+                    <div class="metric-row">
+                        <span>Sync Confidence:</span>
+                        <strong id="syncConfidence">0%</strong>
+                    </div>
+                    <div class="metric-row">
+                        <span>Temporal Offset:</span>
+                        <strong id="syncOffset">0 frames</strong>
+                    </div>
+                    <div class="findings-box">
+                        <span class="findings-title">Detected Signals:</span>
+                        <ul class="findings-list" id="syncFindings">
+                            <li>Phonemes align with visemes</li>
+                        </ul>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
