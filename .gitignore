@@ -58,3 +58,13 @@ data/processed/
 .DS_Store
 Thumbs.db
 *.log
+
+# ASVspoof dataset
+LA/
+LA.zip
+
+# Audio training cache
+modules/audio_modality/cache/
+
+# Model checkpoints
+modules/audio_modality/checkpoints/
