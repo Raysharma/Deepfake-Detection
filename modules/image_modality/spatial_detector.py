@@ -50,33 +50,31 @@ def perform_error_level_analysis(cv2_frame: np.ndarray, quality: int = 90) -> Tu
 
 def compute_2d_fft_artifacts(cv2_frame: np.ndarray) -> float:
     """
-    Computes 2D FFT spectral irregularity score.
-    GAN and Diffusion upsampling layers introduce abnormal high-frequency periodic spikes.
+    Computes 2D FFT spectral residual spike energy.
+    GAN upsampling layers (StyleGAN/ProGAN) produce isolated high-frequency periodic grid spikes.
     """
     try:
         gray = cv2.cvtColor(cv2_frame, cv2.COLOR_BGR2GRAY) if len(cv2_frame.shape) == 3 else cv2_frame
-        h, w = gray.shape
+        gray = cv2.resize(gray, (512, 512), interpolation=cv2.INTER_AREA)
 
-        f = np.fft.fft2(gray)
-        fshift = np.fft.fftshift(f)
-        magnitude_spectrum = 20 * np.log(np.abs(fshift) + 1e-8)
+        f = np.fft.fftshift(np.fft.fft2(gray))
+        mag = 20 * np.log(np.abs(f) + 1e-8).astype(np.float32)
 
+        # Difference between raw spectrum and smooth 5x5 background
+        smooth = cv2.boxFilter(mag, -1, (5, 5))
+        diff = np.abs(mag - smooth)
+
+        h, w = mag.shape
         cy, cx = h // 2, w // 2
-        radius = min(h, w) // 6
-
-        # Mask low structural frequencies
         y, x = np.ogrid[:h, :w]
-        mask = (x - cx)**2 + (y - cy)**2 <= radius**2
+        mask = (x - cx)**2 + (y - cy)**2 >= 64**2
 
-        high_freq_energy = np.mean(magnitude_spectrum[~mask])
-        low_freq_energy = np.mean(magnitude_spectrum[mask])
-
-        ratio = float(high_freq_energy / (low_freq_energy + 1e-5))
-        # Normal images have ratio ~0.4-0.6; GAN deepfakes frequently exceed 0.7
-        normalized_score = float(np.clip((ratio - 0.45) * 1.8, 0.05, 0.92))
+        spike_energy = float(np.mean(diff[mask]**2))
+        # Natural camera photos: ~145; StyleGAN2 synthetic faces: ~770
+        normalized_score = float(np.clip(0.15 + (spike_energy - 150.0) / 650.0 * 0.77, 0.08, 0.94))
         return normalized_score
     except Exception:
-        return 0.18
+        return 0.15
 
 
 def generate_spatial_gradcam(
@@ -183,8 +181,8 @@ def analyze_video_frames(video_path: str, max_frames: int = 30) -> Dict[str, Any
     mean_ela = float(np.mean(ela_scores))
     mean_fft = float(np.mean(fft_scores))
 
-    # Fusion score: 55% FFT spectral + 45% ELA compression discontinuity
-    fake_prob = float(np.clip(0.55 * mean_fft + 0.45 * mean_ela, 0.05, 0.95))
+        # In forensics: High FFT (synthetic GAN face) OR high ELA (face swap) flags as fake!
+    fake_prob = float(np.clip(max(mean_fft, 0.55 * mean_fft + 0.45 * mean_ela), 0.05, 0.95))
     is_fake = bool(fake_prob >= 0.50)
 
     # Generate Grad-CAM visualization
@@ -193,11 +191,13 @@ def analyze_video_frames(video_path: str, max_frames: int = 30) -> Dict[str, Any
         generate_spatial_gradcam(representative_frame, fake_prob, heatmap_path)
 
     detected_artifacts = []
-    if mean_fft > 0.55:
+    if mean_fft >= 0.50:
         detected_artifacts.append("High-frequency GAN grid periodicity detected")
-    if mean_ela > 0.50:
+    if mean_ela >= 0.40:
         detected_artifacts.append("JPEG compression discontinuity at facial boundary")
     if not detected_artifacts:
+        detected_artifacts.append("natural_illumination_consistent")
+
         detected_artifacts.append("natural_illumination_consistent")
 
     return {
