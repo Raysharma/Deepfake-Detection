@@ -194,67 +194,124 @@ function renderResults(data) {
     document.getElementById("verdictScore").textContent = `${fakePercent}%`;
     document.getElementById("verdictTime").textContent = `Processing Time: ${data.processing_time_sec || 0}s`;
 
+    // Modality Type Routing Detection
+    const filename = data.video_filename || (selectedFile ? selectedFile.name : "");
+    const isImageFile = (data.weights && data.weights.image === 1.0) || /\.(jpe?g|png)$/i.test(filename);
+    const isAudioFile = (data.weights && data.weights.audio === 1.0) || /\.(wav|mp3)$/i.test(filename);
+
     // 1. Image Modality
     const img = data.image_analysis || {};
-    document.getElementById("imgFakeProb").textContent = `${Math.round((img.fake_probability || 0) * 100)}%`;
-    document.getElementById("imgFrames").textContent = img.frames_analyzed || 0;
-    setPill("pillImage", img.is_fake);
+    const isImageNA = isAudioFile || (img.detected_artifacts && img.detected_artifacts.includes("not_applicable_for_audio"));
+    document.getElementById("imgFakeProb").textContent = isImageNA ? "N/A" : `${Math.round((img.fake_probability || 0) * 100)}%`;
+    document.getElementById("imgFrames").textContent = isImageNA ? "0" : (img.frames_analyzed || 0);
+    setPill("pillImage", img.is_fake, isImageNA);
     setFindings("imgFindings", img.detected_artifacts);
 
     // 2. Audio Modality
     const aud = data.audio_analysis || {};
-    document.getElementById("audFakeProb").textContent = `${Math.round((aud.fake_probability || 0) * 100)}%`;
-    document.getElementById("audDuration").textContent = `${aud.audio_duration_sec || 0}s`;
-    setPill("pillAudio", aud.is_fake);
+    const isAudioNA = isImageFile || (aud.detected_anomalies && aud.detected_anomalies.includes("not_applicable_for_image"));
+    document.getElementById("audFakeProb").textContent = isAudioNA ? "N/A" : `${Math.round((aud.fake_probability || 0) * 100)}%`;
+    document.getElementById("audDuration").textContent = isAudioNA ? "N/A" : `${aud.audio_duration_sec || 0}s`;
+    setPill("pillAudio", aud.is_fake, isAudioNA);
     setFindings("audFindings", aud.detected_anomalies);
 
     // 3. Lip-Sync Modality (SyncNet)
     const sync = data.video_sync_analysis || {};
-    document.getElementById("syncConfidence").textContent = `${Math.round((sync.sync_confidence || 0) * 100)}%`;
-    document.getElementById("syncOffset").textContent = `${sync.offset_frames || 0} frames`;
-    setPill("pillSync", sync.is_fake);
+    const isSyncNA = isImageFile || isAudioFile || (sync.detected_anomalies && (
+        sync.detected_anomalies.includes("not_applicable_for_image") ||
+        sync.detected_anomalies.includes("not_applicable_for_audio")
+    ));
+    document.getElementById("syncConfidence").textContent = isSyncNA ? "N/A" : `${Math.round((sync.sync_confidence || 0) * 100)}%`;
+    document.getElementById("syncOffset").textContent = isSyncNA ? "N/A" : `${sync.offset_frames || 0} frames`;
+    setPill("pillSync", sync.is_fake, isSyncNA);
     setFindings("syncFindings", sync.detected_anomalies);
 
     // 4. Render Deep Forensic Evidence
-    renderForensicEvidence(img, aud, sync);
+    renderForensicEvidence(img, aud, sync, isAudioNA, isSyncNA, isImageNA);
 }
 
-function renderForensicEvidence(img, aud, sync) {
+function renderForensicEvidence(img, aud, sync, isAudioNA, isSyncNA, isImageNA) {
     const timestamp = Date.now();
 
+    // Toggle .na-card styles on evidence cards
+    const faceCard = document.getElementById("evidenceFaceCard");
+    const audioCard = document.getElementById("evidenceAudioCard");
+    const syncCard = document.getElementById("evidenceSyncCard");
+    if (faceCard) faceCard.classList.toggle("na-card", isImageNA);
+    if (audioCard) audioCard.classList.toggle("na-card", isAudioNA);
+    if (syncCard) syncCard.classList.toggle("na-card", isSyncNA);
+
     // 1. Facial Grad-CAM Heatmap
-    if (img.heatmap_path) {
+    if (!isImageNA && img.heatmap_path) {
         const cleanPath = img.heatmap_path.replace(/\\/g, "/");
         evidenceFaceImg.src = `/${cleanPath}?t=${timestamp}`;
-        document.getElementById("evidenceFaceCard").classList.remove("hidden");
     } else {
-        evidenceFaceImg.src = "https://placehold.co/300x200/121826/00f0ff?text=No+Face+Heatmap";
+        evidenceFaceImg.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200">' +
+            '<rect width="300" height="200" fill="#070b14"/>' +
+            '<text x="150" y="95" fill="#00f0ff" font-family="sans-serif" font-weight="bold" font-size="15" text-anchor="middle">Spatial Heatmap N/A</text>' +
+            '<text x="150" y="125" fill="#64748b" font-family="sans-serif" font-size="12" text-anchor="middle">Requires Image or Video Face</text>' +
+            '</svg>'
+        );
     }
 
     // 2. Audio Mel-Spectrogram Heatmap
-    if (aud.spectrogram_heatmap_path) {
+    if (!isAudioNA && aud.spectrogram_heatmap_path) {
         const cleanAudioPath = aud.spectrogram_heatmap_path.replace(/\\/g, "/");
         evidenceAudioImg.src = `/${cleanAudioPath}?t=${timestamp}`;
-        document.getElementById("evidenceAudioCard").classList.remove("hidden");
     } else {
-        evidenceAudioImg.src = "https://placehold.co/300x200/121826/00f0ff?text=Audio+N/A";
+        evidenceAudioImg.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200">' +
+            '<rect width="300" height="200" fill="#070b14"/>' +
+            '<text x="150" y="95" fill="#00f0ff" font-family="sans-serif" font-weight="bold" font-size="15" text-anchor="middle">Acoustic Analysis N/A</text>' +
+            '<text x="150" y="125" fill="#64748b" font-family="sans-serif" font-size="12" text-anchor="middle">Still Image (No Audio Stream)</text>' +
+            '</svg>'
+        );
     }
 
-    // 3. SyncNet Cross-Correlation Curve Radar (Canvas)
-    const offset = sync.offset_frames || 0;
-    const isSyncFake = sync.is_fake || false;
-    syncRadarBadge.textContent = `${offset > 0 ? "+" : ""}${offset} frames delay`;
-    drawSyncCurve(offset, isSyncFake);
+    // 3. SyncNet Cross-Correlation Radar (Canvas)
+    if (isSyncNA) {
+        syncRadarBadge.textContent = "N/A (Still Image)";
+        syncRadarBadge.style.color = "#9ca3af";
+        syncRadarBadge.style.borderColor = "rgba(255, 255, 255, 0.15)";
+        drawSyncCurve(0, false, false); // Draw N/A state
+    } else {
+        const offset = sync.offset_frames || 0;
+        const isSyncFake = sync.is_fake || false;
+        syncRadarBadge.textContent = `${offset > 0 ? "+" : ""}${offset} frames delay`;
+        syncRadarBadge.style.color = isSyncFake ? "#ff3366" : "#00f0ff";
+        syncRadarBadge.style.borderColor = isSyncFake ? "rgba(255, 51, 102, 0.4)" : "rgba(0, 240, 255, 0.4)";
+        drawSyncCurve(offset, isSyncFake, true);
+    }
 }
 
 // Draws the temporal cross-correlation curve across the ±10 frame search window
-function drawSyncCurve(offset, isFake) {
+function drawSyncCurve(offset, isFake, isApplicable = true) {
     if (!syncCanvas) return;
     const ctx = syncCanvas.getContext("2d");
     const w = syncCanvas.width;
     const h = syncCanvas.height;
 
     ctx.clearRect(0, 0, w, h);
+
+    // If not applicable (e.g. still image)
+    if (!isApplicable) {
+        ctx.fillStyle = "rgba(255, 255, 255, 0.03)";
+        ctx.fillRect(10, 10, w - 20, h - 20);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+        ctx.strokeRect(10, 10, w - 20, h - 20);
+
+        ctx.fillStyle = "#00f0ff";
+        ctx.font = "14px Outfit, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("Lip-Sync N/A", w / 2, h / 2 - 8);
+
+        ctx.fillStyle = "#9ca3af";
+        ctx.font = "11px Outfit, sans-serif";
+        ctx.fillText("Requires Video Stream with Audio", w / 2, h / 2 + 14);
+        ctx.textAlign = "left";
+        return;
+    }
 
     // Background Grid Lines
     ctx.strokeStyle = "rgba(255, 255, 255, 0.06)";
@@ -312,9 +369,12 @@ function drawSyncCurve(offset, isFake) {
     ctx.fill();
 }
 
-function setPill(id, isFake) {
+function setPill(id, isFake, isNA = false) {
     const el = document.getElementById(id);
-    if (isFake) {
+    if (isNA) {
+        el.textContent = "N/A";
+        el.className = "status-pill na";
+    } else if (isFake) {
         el.textContent = "FLAGGED";
         el.className = "status-pill fail";
     } else {

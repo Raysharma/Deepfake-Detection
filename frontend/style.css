@@ -400,6 +400,13 @@ body {
     transition: all 0.3s ease;
 }
 
+.status-pill.na {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+
 .verdict-banner.real {
     background: linear-gradient(135deg, rgba(0, 230, 118, 0.12), rgba(18, 24, 38, 0.8));
     border-color: rgba(0, 230, 118, 0.4);
@@ -636,6 +643,16 @@ body {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    transition: all 0.3s ease;
+}
+
+.evidence-card.na-card {
+    opacity: 0.45;
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+.evidence-card.na-card .evidence-badge {
+    color: var(--text-muted);
 }
 
 .evidence-card-header {

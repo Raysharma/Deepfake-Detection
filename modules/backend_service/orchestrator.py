@@ -85,16 +85,31 @@ def run_full_pipeline(file_path: str) -> dict:
         audio_fake = audio_result.get("fake_probability", 0.0)
         sync_fake = sync_result.get("fake_probability", 0.0)
 
-        max_anomaly = max(image_fake, audio_fake, sync_fake)
+                # Smart Consensus Rule:
+        # A video is FAKE if:
+        # 1. Any single modality detects an extreme attack (>= 75%), OR
+        # 2. At least two modalities are flagged as fake, OR
+        # 3. The weighted average fake probability exceeds 50%
         weighted_avg = (image_fake * w_image) + (audio_fake * w_audio) + (sync_fake * w_sync)
-        overall_fake_prob = max(weighted_avg, max_anomaly)
 
-        is_any_fake = (
-            image_result.get("is_fake", False) or
-            audio_result.get("is_fake", False) or
+        flagged_count = sum([
+            image_result.get("is_fake", False),
+            audio_result.get("is_fake", False),
             sync_result.get("is_fake", False)
-        )
-        verdict = "FAKE" if (overall_fake_prob >= 0.50 or is_any_fake) else "REAL"
+        ])
+
+        has_severe_attack = max(image_fake, audio_fake, sync_fake) >= 0.75
+
+        if has_severe_attack:
+            overall_fake_prob = max(image_fake, audio_fake, sync_fake)
+            verdict = "FAKE"
+        elif flagged_count >= 2 or weighted_avg >= 0.50:
+            overall_fake_prob = weighted_avg
+            verdict = "FAKE"
+        else:
+            # 2 out of 3 models passed with high confidence -> AUTHENTIC!
+            overall_fake_prob = weighted_avg
+            verdict = "REAL"
 
         report = MultimodalFinalReport(
             task_id=task_id,
